@@ -12,6 +12,8 @@
 #define BUF_SIZE 100//최대 99개의 문자 저장가능
 #define MAX_CLNT 256//최대 256개의 Client 접속가능
 
+int check_name(char* msg);//Client 닉네임의 길이를 반환시켜주는 함수
+
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
@@ -65,5 +67,15 @@ int main(int argc, char *argv[])
 	}
 	close(serv_sock);
 	return 0;
+}
+
+int check_name(char* msg)//Client 닉네임의 길이를 반환시켜주는 함수
+{
+	int count = 1;//이름 길이를 세는 count 함수 선언
+	while(msg[count]!=']')//닫힌 괄호가 아닐때까지 반복
+	{
+		count++;//카운트 1씩 증가
+	}
+	return count-1;//마지막 1증가로 인해 1감소
 }
 
