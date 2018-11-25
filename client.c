@@ -16,13 +16,12 @@
 #define NAME_SIZE 20
 
 char name[NAME_SIZE] = "[DEFAULT]";
+int G_sock;
 
 int main(int argc, char* argv[])
 {
         int sock;
         struct sockaddr_in serv_addr;
-        pthread_t snd_thread, rcv_thread, temp_thread;
-        void* thread_return;
 
         if(argc != 4)
         {

@@ -7,20 +7,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
  
 #define MAX_TIMINGS    85
-#define DHT_PIN        7    /* GPIO-22 */
+#define DHT_PIN        7    /* GPIO 4 */
  
-int data[5] = { 0, 0, 0, 0, 0 };
- 
+int data[5] = {0, 0, 0, 0, 0};
+char temp_buf[25];
+
 void read_dht_data()
 {
-    uint8_t laststate    = HIGH;
-    uint8_t counter        = 0;
-    uint8_t j            = 0, i;
+    if(wiringPiSetup() == -1)
+    {
+      printf("wiringPiError\n");
+      exit(1);
+    }
+
+    uint8_t laststate = HIGH;
+    uint8_t counter = 0;
+    uint8_t j = 0;
+    uint8_t i;
  
     data[0] = data[1] = data[2] = data[3] = data[4] = 0;
- 
+
     /* pull pin down for 18 milliseconds */
     pinMode( DHT_PIN, OUTPUT );
     digitalWrite( DHT_PIN, LOW );
@@ -81,7 +90,15 @@ void read_dht_data()
         }
         float f = c * 1.8f + 32;
         printf( "Humidity = %.1f %% Temperature = %.1f *C (%.1f *F)\n", h, c, f );
-    }else  {
+
+        memset(temp_buf, 0, sizeof(temp_buf));
+        sprintf(temp_buf, "Temp%d,%d,%d,%d", data[0], data[1], data[2], data[3]);
+        //write(G_sock,temp_buf, strlen(temp_buf));
+        printf("%s\n",temp_buf);
+
+    }
+    else
+    {
         printf( "Data not good, skip\n" );
     }
 }
@@ -89,9 +106,6 @@ void read_dht_data()
 int main( void )
 {
     printf( "Raspberry Pi DHT11/DHT22 temperature/humidity test\n" );
- 
-    if ( wiringPiSetup() == -1 )
-        exit( 1 );
  
     while ( 1 )
     {
