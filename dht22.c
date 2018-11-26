@@ -37,7 +37,7 @@ void read_dht_data()
  
     /* prepare to read the pin */
     pinMode( DHT_PIN, INPUT );
- 
+
     /* detect change and read data */
     for ( i = 0; i < MAX_TIMINGS; i++ )
     {
@@ -92,7 +92,7 @@ void read_dht_data()
         printf( "Humidity = %.1f %% Temperature = %.1f *C (%.1f *F)\n", h, c, f );
 
         memset(temp_buf, 0, sizeof(temp_buf));
-        sprintf(temp_buf, "Temp%d,%d,%d,%d", data[0], data[1], data[2], data[3]);
+        sprintf(temp_buf, "TeMp%d%d", (int)(h*10),(int)(c*10));
         //write(G_sock,temp_buf, strlen(temp_buf));
         printf("%s\n",temp_buf);
 
