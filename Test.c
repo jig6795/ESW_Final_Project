@@ -14,6 +14,7 @@
 
 int check_name(char* msg);//Client 닉네임의 길이를 반환시켜주는 함수
 void * snd_total(void* arg);//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
+void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
@@ -100,4 +101,70 @@ void* snd_total(void* arg)//Server가 입력한 데이터를 모든 Client들에
 		pthread_mutex_unlock(&mutx);//mutex UNLOCK
 		
 	}
+}
+
+void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처리하는 함수
+{
+	int clnt_sock=*((int*)arg);//인자로 받아온 소켓값을 sock에 저장
+	int str_len=0, i;//입력받은 데이터의 길이를 저장하는 변수 및 roof back message 반복문에서 이용할 변수 선언
+	char msg[BUF_SIZE];//입력받은 데이터를 저장하는 배열 선언
+	char user[25];//Client의 닉네임을 저장하는 변수 선언
+	char initial = 0;//초기에 닉네임을 받아 배열에 저장하기 위한 변수 선언
+	while(1)//무한 루프 생성
+	{	
+		memset(msg,0,sizeof(msg));//입력받을 데이터를 저장하는 배열 초기화
+		str_len=read(clnt_sock, msg, sizeof(msg));//read()를 이용해 데이터를 읽고 해당 데이터의 Size를 반환한다
+
+		if(str_len==0)//만약 입력받은 데이터가 없다면
+		{	
+			break;//무한루프 탈출
+		}
+
+		if(strncmp(msg,"TeMp",4)==0)//만약 온도 데이터라면
+		{
+			printf("T>> 	%s\n",msg);//해당 온, 습도 화면으로 
+			/*
+
+				proceess temp, humi Data
+
+			*/
+		}
+		else//채팅 데이터라면
+		{	
+			if(initial == 0)//해당 아이디를 찾기 위한 조건문
+			{
+				int cnt = check_name(msg);//해당 채팅데이터의 아이디 사이즈를 반환받음
+				memcpy(user,msg,cnt+2);//받은 아이디를 user 버퍼에 저장 +2 는 괄호 2개
+				initial = 1;//다음에 호출되지 않기 위하여 Flag set
+			}
+			printf("user>>	%s\n",msg);//해당 데이터를 화면에 출력
+			/*
+
+				create loop back function
+
+			*/
+		}
+	}	
+	pthread_mutex_lock(&mutx);//metux LOCK
+	for(i=0; i<clnt_cnt; i++)   //disconnecte된 Client를 제거하기 위한 반복문
+	{
+		if(clnt_sock==clnt_socks[i])//해당 Client socket을 찾았다면
+		{
+			while(i++<clnt_cnt-1)//Client개수 -1만큼 반복
+				clnt_socks[i]=clnt_socks[i+1];//해당 인덱스에 다음 인덱스 데이터를 대입시킨다
+			break;//for문 탈출
+		}
+	}
+	clnt_cnt--;//총 Client 개수를 -1씩 감소
+	pthread_mutex_unlock(&mutx);//mutex UNLOCK
+	if(initial==0)//만약 아무런 채팅 입력이 없었다면
+	{
+		printf("\n\ndisconnected : N/A\n\n");//N/A 출력
+	}
+	else
+	{
+		printf("\n\ndisconnected : %s\n\n",user);//입력한 데이터가 있다면 유저 닉네임 출력
+	}
+	close(clnt_sock);//Client 파일을 닫는다
+	return NULL;
 }
