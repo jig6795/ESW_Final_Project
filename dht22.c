@@ -8,12 +8,37 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
- 
+#include <signal.h>
+#include <unistd.h>
+
 #define MAX_TIMINGS    85
 #define DHT_PIN        7    /* GPIO 4 */
  
 int data[5] = {0, 0, 0, 0, 0};
 char temp_buf[25];
+int G_sock;
+
+void read_dht_data();
+
+void sigalarm_handler(int sig)
+{
+  read_dht_data();
+  alarm(60);
+}
+
+void * send_temp(void *arg)
+{
+  int sock = *((int *)arg);
+  G_sock = sock;
+
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sa.sa_handler = sigalarm_handler;
+  sigaction(SIGALRM,&sa,NULL);
+
+  alarm(1);
+}
 
 void read_dht_data()
 {
@@ -93,16 +118,15 @@ void read_dht_data()
 
         memset(temp_buf, 0, sizeof(temp_buf));
         sprintf(temp_buf, "TeMp%d%d", (int)(h*10),(int)(c*10));
-        //write(G_sock,temp_buf, strlen(temp_buf));
-        printf("%s\n",temp_buf);
-
+        write(G_sock,temp_buf, strlen(temp_buf));
+        //printf("%s\n",temp_buf);
     }
     else
     {
         printf( "Data not good, skip\n" );
     }
 }
- 
+
 int main( void )
 {
     printf( "Raspberry Pi DHT11/DHT22 temperature/humidity test\n" );
@@ -110,9 +134,8 @@ int main( void )
     while ( 1 )
     {
         read_dht_data();
-        delay( 3000 ); /* wait 2 seconds before next read */
+        delay( 3000 ); // wait 2 seconds before next read 
     }
  
     return(0);
 }
-
