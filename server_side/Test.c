@@ -15,9 +15,12 @@
 int check_name(char* msg);//Client 닉네임의 길이를 반환시켜주는 함수
 void * snd_total(void* arg);//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
 void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
+void send_msg(char * msg, int len);//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
+void read_data(char* data);//온, 습도 데이터를 읽어 파일에 출력하는 함수
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
+char Roof_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
 
 int G_fd_t;
@@ -132,11 +135,7 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 		if(strncmp(msg,"TeMp",4)==0)//만약 온도 데이터라면
 		{
 			printf("T>> 	%s\n",msg);//해당 온, 습도 화면으로 
-			/*
-
-				proceess temp, humi Data
-
-			*/
+			read_data(msg);
 		}
 		else//채팅 데이터라면
 		{	
@@ -147,11 +146,7 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 				initial = 1;//다음에 호출되지 않기 위하여 Flag set
 			}
 			printf("user>>	%s\n",msg);//해당 데이터를 화면에 출력
-			/*
-
-				create loop back function
-
-			*/
+			send_msg(msg,str_len);//채팅 데이터만 roof back
 		}
 	}	
 	pthread_mutex_lock(&mutx);//metux LOCK
@@ -201,4 +196,14 @@ void read_data(char* data)//온, 습도 데이터를 읽어 출력하는 함수
 	sprintf(res_hud,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d\n",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,hud/10,hud%10);
 	//현재 시간과 온, 습도를 각각의 배열에 옮겨 담는다.
 	printf("%s\n%s\n\n",res_temp,res_hud);//현재의 시간과 온, 습도 화면에 출력
+}
+
+void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
+{
+	int idx;//연결되어 있는 모든 Client들에게 데이터를 전송하기 위한 반복문에 쓰일 인덱스
+	sprintf(Roof_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
+	/*
+		send data to client
+	*/
+
 }
