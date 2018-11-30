@@ -18,6 +18,9 @@
 char name[NAME_SIZE] = "[DEFAULT]";
 int G_sock;
 
+pthread_t snd_thread, rcv_thread, temp_thread;
+void* thread_return;
+
 int main(int argc, char* argv[])
 {
         int sock;
@@ -42,6 +45,14 @@ int main(int argc, char* argv[])
                 printf("connect() error\n\n");
                 exit(1);
         }
+
+        //pthread_create(&snd_thread,NULL,send_msg,(void*)&sock);
+        //pthread_create(&rcv_thread,NULL,recv_msg,(void*)&sock);
+        //pthread_create(&temp_thread,NULL,send_temp,(void*)&sock);
+
+        //pthread_join(snd_thread, &thread_return);
+        //pthread_join(rcv_thread, &thread_return);
+        //pthread_join(temp_thread, &thread_return);
 
         close(sock);
         return 0;
