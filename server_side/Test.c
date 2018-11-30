@@ -202,8 +202,13 @@ void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들�
 {
 	int idx;//연결되어 있는 모든 Client들에게 데이터를 전송하기 위한 반복문에 쓰일 인덱스
 	sprintf(Roof_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
-	/*
-		send data to client
-	*/
+	
+	pthread_mutex_lock(&mutx);//mutex LOCK
+	for(idx=0; idx<clnt_cnt; idx++)//모든 Client들에게 데이터를 전송시키기 위해 반복한다
+	{
+		write(clnt_socks[idx], Roof_Back_data,strlen(Roof_Back_data));//해당 Client에 데이터를 전송
+	}	
+	pthread_mutex_unlock(&mutx);//mutex UNLOCK
+
 
 }
