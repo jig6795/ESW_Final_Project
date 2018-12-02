@@ -8,24 +8,22 @@
 
 char msg[BUF_SIZE];
 
-char send_name[BUF_SIZE] = "[DEFAULT]";
+extern char name[BUF_SIZE];
 
 void* send_msg(void* arg)
 {
   int sock = *((int*)arg);
-
   char name_msg[NAME_SIZE+BUF_SIZE];
 
   while(1)
   {
     fgets(msg,BUF_SIZE,stdin);
-
-    if(!strcmp(msg,"q\n")||strcmp(msg,"Q\n"))
+    if(!strcmp(msg,"q\n")||!strcmp(msg,"Q\n"))
     {
       close(sock);
       exit(1);
     }
-    sprintf(name_msg,"%s > %s",send_name,msg);
+    sprintf(name_msg,"%s > %s",name,msg);
     write(sock,name_msg,strlen(name_msg));
     memset(msg,0,sizeof(msg));
   }
