@@ -7,7 +7,8 @@
 #define NAME_SIZE 20
 
 char msg[BUF_SIZE];
-char name[NAME_SIZE] = "[DEFAULT]";
+
+char send_name[BUF_SIZE] = "[DEFAULT]";
 
 void* send_msg(void* arg)
 {
@@ -24,7 +25,7 @@ void* send_msg(void* arg)
       close(sock);
       exit(1);
     }
-    sprintf(name_msg,"%s > %s",name,msg);
+    sprintf(name_msg,"%s > %s",send_name,msg);
     write(sock,name_msg,strlen(name_msg));
     memset(msg,0,sizeof(msg));
   }
@@ -51,7 +52,7 @@ void* recv_msg(void* arg)
   return NULL;
 }
 
-
+/*
 int main(void)
 {
   while(1)
@@ -60,3 +61,4 @@ int main(void)
     return 0;
   }
 }
+*/

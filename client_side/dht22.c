@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include "dht22.h"
+
 #define MAX_TIMINGS    85
 #define DHT_PIN        7    /* GPIO 4 */
  
@@ -20,7 +22,7 @@ int G_sock;
 
 void read_dht_data();
 
-void sigalarm_handler(int sig)
+void sigint_handler(int sig)
 {
   read_dht_data();
   alarm(60);
@@ -31,11 +33,7 @@ void * send_temp(void *arg)
   int sock = *((int *)arg);
   G_sock = sock;
 
-  struct sigaction sa;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0;
-  sa.sa_handler = sigalarm_handler;
-  sigaction(SIGALRM,&sa,NULL);
+  signal(SIGALRM,sigint_handler);
 
   alarm(1);
 }
@@ -127,6 +125,8 @@ void read_dht_data()
     }
 }
 
+/*
+
 int main( void )
 {
     printf( "Raspberry Pi DHT11/DHT22 temperature/humidity test\n" );
@@ -139,3 +139,4 @@ int main( void )
  
     return(0);
 }
+*/
