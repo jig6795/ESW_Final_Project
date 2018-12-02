@@ -20,7 +20,7 @@ void read_data(char* data);//온, 습도 데이터를 읽어 파일에 출력하
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
-char Roof_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
+char loop_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
 
 int G_fd_t;
@@ -77,6 +77,11 @@ int main(int argc, char *argv[])
 		clnt_socks[clnt_cnt++]=clnt_sock;//Client에 대한 소켓정보를 순서대로 누적하여 저장
 		pthread_mutex_unlock(&mutx);//mutex UNLOCK
 	
+		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);//handle_clnt()에 대한 쓰레드 생성
+		pthread_create(&send_id,NULL,snd_total,(void*)&clnt_sock);//snd_total()에 대한 쓰레드 생성
+		pthread_detach(send_id);
+		pthread_detach(t_id);//쓰레드 종료후 각각의 쓰레드 반환
+
 		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));//해당 네트워크 주소 문자열로 화면에 출력
 	}
 	close(serv_sock);
@@ -201,9 +206,12 @@ void read_data(char* data)//온, 습도 데이터를 읽어 출력하는 함수
 void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
 {
 	int idx;//연결되어 있는 모든 Client들에게 데이터를 전송하기 위한 반복문에 쓰일 인덱스
-	sprintf(Roof_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
-	/*
-		send data to client
-	*/
-
+	sprintf(loop_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
+	
+	pthread_mutex_lock(&mutx);//mutex LOCK
+	for(idx=0; idx<clnt_cnt; idx++)//모든 Client들에게 데이터를 전송시키기 위해 반복한다
+	{
+		write(clnt_socks[idx], loop_Back_data,strlen(loop_Back_data));//해당 Client에 데이터를 전송
+	}	
+	pthread_mutex_unlock(&mutx);//mutex UNLOCK
 }
