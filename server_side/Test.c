@@ -16,12 +16,18 @@ int check_name(char* msg);//Client 닉네임의 길이를 반환시켜주는 함
 void * snd_total(void* arg);//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
 void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
 void send_msg(char * msg, int len);//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
-void read_data(char* data);//온, 습도 데이터를 읽어 파일에 출력하는 함수
+void read_data(char* data,char client_rpi_numt);//온, 습도 데이터를 읽어 파일에 출력하는 함수
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
 char loop_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
+
+struct rpi_total_data{
+	char temp[50];
+	char humi[50];
+}RPI[10];
+int rpi_total_cnt = 0;
 
 int G_fd_t;
 int G_fd_h;//온, 습도 파일 디스크립터를 전역 변수로 전환
@@ -127,6 +133,9 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 	char msg[BUF_SIZE];//입력받은 데이터를 저장하는 배열 선언
 	char user[25];//Client의 닉네임을 저장하는 변수 선언
 	char initial = 0;//초기에 닉네임을 받아 배열에 저장하기 위한 변수 선언
+
+	char client_rpi_num;
+	char check_rpi = 0;
 	while(1)//무한 루프 생성
 	{	
 		memset(msg,0,sizeof(msg));//입력받을 데이터를 저장하는 배열 초기화
@@ -139,8 +148,14 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 
 		if(strncmp(msg,"TeMp",4)==0)//만약 온도 데이터라면
 		{
-			printf("T>> 	%s\n",msg);//해당 온, 습도 화면으로 
-			read_data(msg);
+			if(!check_rpi)
+			{
+				pthread_mutex_lock(&mutx);
+				client_rpi_num = rpi_total_cnt++;
+				pthread_mutex_unlock(&mutx);
+				check_rpi = 1;
+			}
+			read_data(msg,client_rpi_num);
 		}
 		else//채팅 데이터라면
 		{	
@@ -178,7 +193,7 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 	return NULL;
 }
 
-void read_data(char* data)//온, 습도 데이터를 읽어 출력하는 함수
+void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어 출력하는 함수
 {
 	itg_data = 0;//온,습도를 정수로 받기 위한 변수 선언
 	temp = 0;
@@ -196,11 +211,17 @@ void read_data(char* data)//온, 습도 데이터를 읽어 출력하는 함수
 	struct tm *t;//시, 분, 초 각각 출력하기 위한 tm 구조체 선언
 	tim = time(NULL);//현재 시간을 초단위로 얻는다.
 	t = localtime(&tim);//연, 월, 일, 시, 분, 초로 분리하여 tm구조체에 저장한다.
+	pthread_mutex_lock(&mutx);
 
-	sprintf(res_temp,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d\n",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,temp/10,temp%10);
-	sprintf(res_hud,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d\n",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,hud/10,hud%10);
-	//현재 시간과 온, 습도를 각각의 배열에 옮겨 담는다.
-	printf("%s\n%s\n\n",res_temp,res_hud);//현재의 시간과 온, 습도 화면에 출력
+	memset(RPI[client_rpi_num].temp,0,sizeof(RPI[client_rpi_num].temp));
+	memset(RPI[client_rpi_num].humi,0,sizeof(RPI[client_rpi_num].humi));
+	sprintf(RPI[client_rpi_num].temp,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,temp/10,temp%10);
+	sprintf(RPI[client_rpi_num].humi,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,hud/10,hud%10);
+	printf("RPI %d\n%s\n%s\n\n",client_rpi_num+1,RPI[client_rpi_num].temp,RPI[client_rpi_num].humi);//현재의 시간과 온, 습도 화면에 출력
+
+	pthread_mutex_unlock(&mutx);
+	
+	
 }
 
 void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
