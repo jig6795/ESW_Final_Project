@@ -13,14 +13,12 @@
 #define MAX_CLNT 256//최대 256개의 Client 접속가능
 
 int check_name(char* msg);//Client 닉네임의 길이를 반환시켜주는 함수
-void * snd_total(void* arg);//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
+void * snd_total();//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
 void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
 void send_msg(char * msg, int len);//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
 void read_data(char* data,char client_rpi_numt);//온, 습도 데이터를 읽어 파일에 출력하는 함수
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
-char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
-char loop_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
 
 struct rpi_total_data{
@@ -28,14 +26,6 @@ struct rpi_total_data{
 	char humi[50];
 }RPI[10];
 int rpi_total_cnt = 0;
-
-int G_fd_t;
-int G_fd_h;//온, 습도 파일 디스크립터를 전역 변수로 전환
-int itg_data;//온, 습도를 문자열에서 정수형 데이터로 전환받을 변수 선언
-char res_temp[30];
-char res_hud[30];//최종적 시간과 온, 습도를 저장하여 파일에 출력시키는 배열 선언
-unsigned int temp;
-unsigned int hud;//온도와 습도를 정수로 저장하는 변수 선언
 
 int main(int argc, char *argv[])
 {
@@ -69,7 +59,9 @@ int main(int argc, char *argv[])
 		exit(1);//프로그램 종료
 	}
 
-	
+	pthread_create(&send_id,NULL,snd_total,NULL);//snd_total()에 대한 쓰레드 생성
+	pthread_detach(send_id);
+
 	while(1)
 	{
 		clnt_adr_sz=sizeof(clnt_adr);//accept()를 하기 위해 Client 소켓의 사이즈를 얻는다
@@ -79,37 +71,27 @@ int main(int argc, char *argv[])
 			printf("accept() error\n\n");//경고문구 출력
 			exit(1);//프로그램 종료
 		}
+
+		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));//해당 네트워크 주소 문자열로 화면에 출력
+
 		pthread_mutex_lock(&mutx);//mutex LOCK
 		clnt_socks[clnt_cnt++]=clnt_sock;//Client에 대한 소켓정보를 순서대로 누적하여 저장
 		pthread_mutex_unlock(&mutx);//mutex UNLOCK
 	
 		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);//handle_clnt()에 대한 쓰레드 생성
-		pthread_create(&send_id,NULL,snd_total,(void*)&clnt_sock);//snd_total()에 대한 쓰레드 생성
-		pthread_detach(send_id);
 		pthread_detach(t_id);//쓰레드 종료후 각각의 쓰레드 반환
-
-		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));//해당 네트워크 주소 문자열로 화면에 출력
 	}
 	close(serv_sock);
 	return 0;
 }
 
-int check_name(char* msg)//Client 닉네임의 길이를 반환시켜주는 함수
-{
-	int count = 1;//이름 길이를 세는 count 함수 선언
-	while(msg[count]!=']')//닫힌 괄호가 아닐때까지 반복
-	{
-		count++;//카운트 1씩 증가
-	}
-	return count-1;//마지막 1증가로 인해 1감소
-}
-
-void* snd_total(void* arg)//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
+void* snd_total()//Server가 입력한 데이터를 모든 Client들에게 전송하는 함수
 {
 	int s_idx;//모든 Client들에게 데이터를 전송시켜주기 위한  선언
-	memset(send_BUF,0,sizeof(send_BUF));//데이터를 보낼때 사용하는 배열의 버퍼 초기화
+	char send_BUF[BUF_SIZE];//Server가 입력한 데이터를 Client에게 보낼때 사용하는 배열 선언
 	while(1)//무한루프 생성
 	{
+		memset(send_BUF,0,sizeof(send_BUF));//데이터를 보낼때 사용하는 배열의 버퍼 초기화
 		fgets(send_BUF,BUF_SIZE,stdin);//키보드의 입력을 배열로 받아온다.
 		if(!strcmp(send_BUF,"Q\n")||!strcmp(send_BUF,"q\n"))//만약 입력받은 문자열이 "Q"또는 "q"라면
 		{
@@ -124,6 +106,16 @@ void* snd_total(void* arg)//Server가 입력한 데이터를 모든 Client들에
 		pthread_mutex_unlock(&mutx);//mutex UNLOCK
 		
 	}
+}
+
+int check_name(char* msg)//Client 닉네임의 길이를 반환시켜주는 함수
+{
+	int count = 1;//이름 길이를 세는 count 함수 선언
+	while(msg[count]!=']')//닫힌 괄호가 아닐때까지 반복
+	{
+		count++;//카운트 1씩 증가
+	}
+	return count-1;//마지막 1증가로 인해 1감소
 }
 
 void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처리하는 함수
@@ -195,11 +187,10 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 
 void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어 출력하는 함수
 {
-	itg_data = 0;//온,습도를 정수로 받기 위한 변수 선언
-	temp = 0;
-	hud = 0;//온,습도를 정수로 저장하는 변수 선언
-	memset(res_temp,0,sizeof(res_temp));
-	memset(res_hud,0,sizeof(res_hud));//시간과 온, 습도를 저장받아 출력하는 버퍼 초기화
+	int itg_data = 0;//온,습도를 정수로 받기 위한 변수 선언
+	int temp = 0;
+	int hud = 0;//온,습도를 정수로 저장하는 변수 선언
+
 	memmove(data,data+4,strlen(data));//'TeMp'단어 제거 data+4부터 데이터 길이까지 앞으로 이동
 
 	itg_data = atoi(data);//입력받는 온, 습도 데이터를 정수로 변환
@@ -211,6 +202,7 @@ void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어
 	struct tm *t;//시, 분, 초 각각 출력하기 위한 tm 구조체 선언
 	tim = time(NULL);//현재 시간을 초단위로 얻는다.
 	t = localtime(&tim);//연, 월, 일, 시, 분, 초로 분리하여 tm구조체에 저장한다.
+
 	pthread_mutex_lock(&mutx);
 
 	memset(RPI[client_rpi_num].temp,0,sizeof(RPI[client_rpi_num].temp));
@@ -220,16 +212,15 @@ void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어
 	printf("RPI %d\n%s\n%s\n\n",client_rpi_num+1,RPI[client_rpi_num].temp,RPI[client_rpi_num].humi);//현재의 시간과 온, 습도 화면에 출력
 
 	pthread_mutex_unlock(&mutx);
-	
-	
 }
 
 void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
 {
 	int idx;//연결되어 있는 모든 Client들에게 데이터를 전송하기 위한 반복문에 쓰일 인덱스
-	sprintf(loop_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
+	char loop_Back_data[BUF_SIZE];//입력받은 데이터를 모든 Client들에게 roof back 시켜줄때 쓰이는 배열 
 	
 	pthread_mutex_lock(&mutx);//mutex LOCK
+	sprintf(loop_Back_data,"total>> %s\n",msg);//"total>>"문자열과 입력받은 데이터를 하나의 배열에 합친다
 	for(idx=0; idx<clnt_cnt; idx++)//모든 Client들에게 데이터를 전송시키기 위해 반복한다
 	{
 		write(clnt_socks[idx], loop_Back_data,strlen(loop_Back_data));//해당 Client에 데이터를 전송
