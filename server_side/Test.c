@@ -17,6 +17,7 @@ void * snd_total();//Server가 입력한 데이터를 모든 Client들에게 전
 void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
 void send_msg(char * msg, int len);//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
 void read_data(char* data,char client_rpi_numt);//온, 습도 데이터를 읽어 파일에 출력하는 함수
+void response_information(char *msg, int socket);
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
@@ -149,6 +150,14 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 			}
 			read_data(msg,client_rpi_num);
 		}
+		else if(strncmp(msg,"ReQuEsT",7))
+		{
+
+			/*
+			send to clinet total RPI temp, humi information
+			
+			*/
+		}
 		else//채팅 데이터라면
 		{	
 			if(initial == 0)//해당 아이디를 찾기 위한 조건문
@@ -226,4 +235,10 @@ void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들�
 		write(clnt_socks[idx], loop_Back_data,strlen(loop_Back_data));//해당 Client에 데이터를 전송
 	}	
 	pthread_mutex_unlock(&mutx);//mutex UNLOCK
+}
+
+void response_information(char *msg, int socket)
+{
+
+
 }
