@@ -33,7 +33,14 @@ void * send_temp(void *arg)
   int sock = *((int *)arg);
   G_sock = sock;
 
-  signal(SIGALRM,sigint_handler);
+  struct sigaction sa;
+
+  //signal(SIGALRM,sigint_handler);
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sa.sa_handler = sigint_handler;
+
+  sigaction(SIGALRM,&sa,NULL);
 
   alarm(1);
 }
