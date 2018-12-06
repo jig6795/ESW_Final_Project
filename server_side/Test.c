@@ -17,12 +17,13 @@ void * snd_total();//Server가 입력한 데이터를 모든 Client들에게 전
 void * handle_clnt(void * arg);//Client로 부터 입력받은 데이터를 처리하는 함수
 void send_msg(char * msg, int len);//입력받은 데이터를 모든 Client들에게 roof back 시켜주는 함수
 void read_data(char* data,char client_rpi_numt);//온, 습도 데이터를 읽어 파일에 출력하는 함수
-void response_information(char *msg, int socket);
+void response_information(int socket);
 int clnt_cnt=0;//현재 Client의 개수를 저장할 변수 선언
 int clnt_socks[MAX_CLNT];//Client들의 소켓 정보를 저장하는 배열 선언
 pthread_mutex_t mutx;//뮤텍스 mutx 선언
 
 struct rpi_total_data{
+	char timestamp[50];
 	char temp[50];
 	char humi[50];
 }RPI[10];
@@ -124,6 +125,7 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 	int clnt_sock=*((int*)arg);//인자로 받아온 소켓값을 sock에 저장
 	int str_len=0, i;//입력받은 데이터의 길이를 저장하는 변수 및 roof back message 반복문에서 이용할 변수 선언
 	char msg[BUF_SIZE];//입력받은 데이터를 저장하는 배열 선언
+	char check_info[50];
 	char user[25];//Client의 닉네임을 저장하는 변수 선언
 	char initial = 0;//초기에 닉네임을 받아 배열에 저장하기 위한 변수 선언
 
@@ -150,24 +152,27 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 			}
 			read_data(msg,client_rpi_num);
 		}
-		else if(strncmp(msg,"ReQuEsT",7))
-		{
-
-			/*
-			send to clinet total RPI temp, humi information
-			
-			*/
-		}
 		else//채팅 데이터라면
 		{	
+			int cnt = check_name(msg);//해당 채팅데이터의 아이디 사이즈를 반환받음
 			if(initial == 0)//해당 아이디를 찾기 위한 조건문
 			{
-				int cnt = check_name(msg);//해당 채팅데이터의 아이디 사이즈를 반환받음
 				memcpy(user,msg,cnt+2);//받은 아이디를 user 버퍼에 저장 +2 는 괄호 2개
 				initial = 1;//다음에 호출되지 않기 위하여 Flag set
 			}
-			printf("user>>	%s\n",msg);//해당 데이터를 화면에 출력
-			send_msg(msg,str_len);//채팅 데이터만 roof back
+
+			printf("%s\n",msg);
+			memset(check_info,0,sizeof(check_info));
+			strncpy(check_info,msg,sizeof(check_info)-1);
+			memmove(check_info,check_info+cnt+5,strlen(check_info));		
+			if(!strncmp(check_info,"ReQuEsT",7))
+			{
+				response_information(clnt_sock);
+			}
+			else
+			{
+				send_msg(msg,str_len);//채팅 데이터만 loop back
+			}
 		}
 	}	
 	pthread_mutex_lock(&mutx);//metux LOCK
@@ -216,9 +221,10 @@ void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어
 
 	memset(RPI[client_rpi_num].temp,0,sizeof(RPI[client_rpi_num].temp));
 	memset(RPI[client_rpi_num].humi,0,sizeof(RPI[client_rpi_num].humi));
-	sprintf(RPI[client_rpi_num].temp,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,temp/10,temp%10);
-	sprintf(RPI[client_rpi_num].humi,"%04d-%02d-%02d %02d:%02d:%02d,%d.%d",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec,hud/10,hud%10);
-	printf("RPI %d\n%s\n%s\n\n",client_rpi_num+1,RPI[client_rpi_num].temp,RPI[client_rpi_num].humi);//현재의 시간과 온, 습도 화면에 출력
+	sprintf(RPI[client_rpi_num].timestamp,"%04d-%02d-%02d %02d:%02d:%02d",t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,t->tm_hour, t->tm_min, t->tm_sec);
+	sprintf(RPI[client_rpi_num].temp,"%d.%d",temp/10,temp%10);
+	sprintf(RPI[client_rpi_num].humi,"%d.%d",hud/10,hud%10);
+	printf("RPI %d\n%s  %s\n",client_rpi_num+1,RPI[client_rpi_num].temp,RPI[client_rpi_num].humi);//현재의 시간과 온, 습도 화면에 출력
 
 	pthread_mutex_unlock(&mutx);
 }
@@ -237,8 +243,13 @@ void send_msg(char * msg, int len)//입력받은 데이터를 모든 Client들�
 	pthread_mutex_unlock(&mutx);//mutex UNLOCK
 }
 
-void response_information(char *msg, int socket)
+void response_information(int socket)
 {
-
-
+	char send_info[BUF_SIZE] = {0};
+	for(int i = 0 ; i<rpi_total_cnt;i++)
+	{
+		memset(send_info,0,sizeof(send_info));
+		sprintf(send_info,"RPI %d : timestamp: %s  temperature %s 'C    humidity %s %%\n",i+1,RPI[i].timestamp,RPI[i].temp,RPI[i].humi);
+		write(socket,send_info,sizeof(send_info));
+	}
 }
