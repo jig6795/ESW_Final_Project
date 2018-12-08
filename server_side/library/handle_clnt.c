@@ -61,10 +61,10 @@ void * handle_clnt(void * arg)//Client로 부터 입력받은 데이터를 처�
 				initial = 1;//다음에 호출되지 않기 위하여 Flag set
 			}
 
-			printf("%s\n",msg);
 			memset(check_info,0,sizeof(check_info));
 			strncpy(check_info,msg,sizeof(check_info)-1);
-			memmove(check_info,check_info+cnt+5,strlen(check_info));		
+			memmove(check_info,check_info+cnt+5,strlen(check_info));
+
 			if(!strncmp(check_info,"ReQuEsT",7))
 			{
 				response_information(clnt_sock);
@@ -136,6 +136,17 @@ void read_data(char* data, char client_rpi_num)//온, 습도 데이터를 읽어
 	sprintf(RPI[client_rpi_num].temp,"%d.%d",temp/10,temp%10);
 	sprintf(RPI[client_rpi_num].humi,"%d.%d",hud/10,hud%10);
 	printf("RPI %d\n%s  %s\n",client_rpi_num+1,RPI[client_rpi_num].temp,RPI[client_rpi_num].humi);//현재의 시간과 온, 습도 화면에 출력
+	
+	if(!(temp/10>22&&temp/10<28)||!(hud/10>40&&hud/10<50))
+	{
+		char warning_msg[BUF_SIZE];
+		sprintf(warning_msg, "RPI %d Keep proper temperature and humidity...\n",client_rpi_num+1);
+
+		for(int idx=0; idx<clnt_cnt; idx++)//모든 Client들에게 데이터를 전송시키기 위해 반복한다
+		{
+			write(clnt_socks[idx], warning_msg,strlen(warning_msg));//해당 Client에 데이터를 전송
+		}
+	}
 
 	pthread_mutex_unlock(&mutx);
 }
@@ -163,5 +174,6 @@ void response_information(int socket)//모든 온,습도의 rpi의 정보를 cli
 		sprintf(send_info,"RPI %d : timestamp: %s  temperature %s 'C    humidity %s %%\n",i+1,RPI[i].timestamp,RPI[i].temp,RPI[i].humi);
         printf("%s\n",send_info);
 		write(socket,send_info,sizeof(send_info));
+		sleep(1);
 	}
 }
