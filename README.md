@@ -17,7 +17,7 @@ client development environment was developed in Raspbian Stretch with desktop OS
 ### required sensors
 Temperature and humidity sensors use the dht22 sensor from adafruit.
 
-Since the development language uses c language, in order to control GPIO in c language in raspberry pi3, the wiringpi library must be installed in advance
+Since the development language uses c language, in order to control GPIO using c language in raspberry pi3, the wiringpi library must be installed in advance
 
 ## Function Available
 The following functions are available in the program.
