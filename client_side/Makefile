@@ -1,15 +1,13 @@
-OBJS=dht22.o send_recv_msg.o
-LIB=libclient.a
-LINK=-lclient -lwiringPi -lpthread
-CC=gcc
-AR=ar
-RES=client
+DIRS= lib client_main
 
-$(RES): $(OBJS) $(LIB)
-	$(CC) -o $(RES) client.c -L. $(LINK)
-libclient.a: $(OBJS)
-	$(AR) rv $(LIB) $(OBJS)
-%.o: %.c
-	$(CC) -c $< -o $@
+all:
+	@for d in $(DIRS); \
+	do \
+		$(MAKE) -C $$d; \
+	done
+
 clean:
-	rm -f *.o libclient $(RES)
+	@for d in $(DIRS); \
+	do \
+		$(MAKE) -C $$d clean; \
+	done
