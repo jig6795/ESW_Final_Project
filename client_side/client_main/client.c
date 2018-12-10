@@ -52,11 +52,11 @@ int main(int argc, char* argv[])
         if(strncmp(argv[3], "RPI", 3) == 0)
         {
           pthread_create(&snd_thread,NULL,send_msg,(void*)&sock);
-          pthread_create(&rcv_thread,NULL,recv_msg,(void*)&sock);
+          //pthread_create(&rcv_thread,NULL,recv_msg,(void*)&sock);
           pthread_create(&temp_thread,NULL,send_temp,(void*)&sock);
 
           pthread_join(snd_thread, &thread_return);
-          pthread_join(rcv_thread, &thread_return);
+          //pthread_join(rcv_thread, &thread_return);
           pthread_join(temp_thread, &thread_return);
         }
         else

@@ -25,7 +25,7 @@ void read_dht_data();
 void sigint_handler(int sig)
 {
   read_dht_data();
-  alarm(60);
+  alarm(10);
 }
 
 void * send_temp(void *arg)
